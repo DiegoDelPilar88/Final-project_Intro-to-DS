@@ -1,0 +1,265 @@
+---
+title: "Determinants of Youth Employment"
+subtitle: "Sub-Saharan Africa"
+author: "Diego Del Pilar"
+date: "December 4, 2019"
+output: 
+  beamer_presentation:
+    theme: "AnnArbor"
+    colortheme: "dolphin"
+    fonttheme: "structurebold"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+setwd("~/")
+library(haven)
+library(sjlabelled)
+library(tidyverse)
+library(knitr)
+library(xtable)
+```
+
+## Background
+- Youth employment is a major concern in developing countries 
+\vspace{0.5cm}
+- Young people are up to 4x more likely than adults to be unemployed
+\vspace{0.5cm}
+- In developing countries, 85% of jobs taken by youth belong to informal markets
+\vspace{0.5cm}
+- A quarter of the young people cannot find a salary above extreme poverty line, $1.25 per day
+\vspace{0.5cm}
+- But youth are dissatisfied with their employment situation (rural & agricultural) and aspire to more 
+\vspace{0.5cm}
+- Main reason for wanting to change: low pay, temporary nature of employment & poor working conditions 
+
+
+## Problem statement
+- Policy interventions from supply and demand side can be instrumented
+\vspace{0.5cm}
+- The International Labor Organization (ILO) designed the School-to-Work Transition Survey (SWTS):
+  - Provide relevant labor market information on young people aged 15 to 29 years
+  - Characteristics of youth
+  - Characteristics of their jobs
+  - Youth aspirations
+
+## The data
+- 2014 surveys for 9 Sub-Saharan Africa countries: Benin, Liberia, Togo, Congo, Malawi, Zambia, Madagascar, Tanzania and Uganda 
+\vspace{0.5cm}
+- Data wrangling: 
+  - Each database is labeled differently
+  - +400 questions per survey
+  - Select variables of interest
+  - Merge databases
+\vspace{0.5cm}
+- Started with 3 countries: Benin, Liberia, Togo. N size: 9,400
+
+---
+```{r include=FALSE}
+library(rgdal)
+my_spdf <- readOGR( 
+  dsn= paste0(getwd(),"/Data/world_shape_file/") , 
+  layer="TM_WORLD_BORDERS_SIMPL-0.3",
+  verbose=FALSE
+)
+africa <- my_spdf[my_spdf@data$REGION==2 , ] 
+par(mar=c(0,0,0,0))
+```
+
+## Africa plot
+
+```{r africa}
+# Plot africa
+plot(africa , xlim=c(-50,10) , ylim=c(-50,35), col="steelblue", lwd=0.9 )
+```
+
+## 3. The model
+The objective of the project is to find a model that predicts the probability of young people to find a job, base on certain characteristics, in Sub-Saharan Africa countries.
+
+$$
+\begin{aligned}
+Y = \beta_{0} + \beta_{n} X_{n} + \epsilon
+\end{aligned}
+$$
+Where: 
+\vspace{0.5cm}
+
+* $Y$ is the probability of a youth to being employed 
+* $X_{n}$ is a matrix of predictors based on the information from the survey
+
+## Logit regression
+```{r include=FALSE}
+# Databases are in stata
+
+Togo_2014 <- read_dta("Data/Togo_2014.dta") %>%
+  remove_all_labels(.)
+
+Liberia_2014 <- read_dta("Data/Liberia_2014.dta") %>%
+  remove_all_labels(.)
+
+Benin_2014 <- read_dta("Data/Benin_2014.dta") %>%
+  remove_all_labels(.)
+```
+
+```{r include=FALSE}
+#Keeping just variables of interest and labeling
+Benin_2014 <- select(Benin_2014, personid, m01_04, m01_07,m01_08, C05, C06,
+                    C09, C10, C12, C14, C15, D01, E06, E07, E08, E10, E13J, 
+                    E13K, E14Y, E17, E31, E37, F08, F19, F23, b06, b11n, b12,
+                    b21, b23) %>%
+  rename(
+    id = personid,
+    sex = m01_04,
+    age = m01_07,
+    married = m01_08,
+    edu_level = C05,
+    exp_level_edu = C06,
+    ideal_work = C09,
+    inter_school = C10,
+    field_edu = C12,
+    work_while_study = C14,
+    intership = C15,
+    employed = D01,
+    where_work = E06,
+    num_employ = E07,
+    remuner = E08,
+    type_contract = E10,
+    social_security = E13J,
+    train = E13K,
+    salary = E14Y,
+    salary_freq = E17,
+    satisfaction = E31,
+    union = E37,
+    time_unemployed = F08,
+    reserve_wage = F19,
+    chall_job = F23,
+    prev_resid = b06,
+    child = b11n,
+    financial_sit = b12,
+    educ_fath = b21,
+    educ_moth = b23
+) %>%
+  mutate(country = "Benin")
+
+```
+
+```{r include=FALSE}
+#Creating an id
+Togo_2014$id <- paste(Togo_2014$a8, Togo_2014$b1)
+
+#Keeping just variables of interest and labeling
+Togo_2014 <-select(Togo_2014, id, sex, age, b9, c5, c6, c9, c10, c12, c14, c15, d1,
+                   e6, e7, E08, E10, e13j, e13k, e14b, payment_period, E31,
+                   e37, f8, f19a, f23, b6, b11, b12, b21, b23) %>%
+  rename(
+    sex = sex,
+    age = age,
+    married = b9,
+    edu_level = c5,
+    exp_level_edu = c6,
+    ideal_work = c9,
+    inter_school = c10,
+    field_edu = c12,
+    work_while_study = c14,
+    intership = c15,
+    employed = d1,
+    where_work = e6,
+    num_employ = e7,
+    remuner = E08,
+    type_contract = E10,
+    social_security = e13j,
+    train = e13k,
+    salary = e14b,
+    salary_freq = payment_period,
+    satisfaction = E31,
+    union = e37,
+    time_unemployed = f8,
+    reserve_wage = f19a,
+    chall_job = f23,
+    prev_resid = b6,
+    child = b11,
+    financial_sit = b12,
+    educ_fath = b21,
+    educ_moth = b23
+) %>%
+  mutate(country = "Togo")
+```
+
+```{r include=FALSE}
+base_merge <- rbind(Togo_2014, Benin_2014)
+```
+
+```{r include=FALSE}
+#Creating a new unique id variable
+Liberia_2014<- tibble::rowid_to_column(Liberia_2014, "id")
+
+#Keeping just variables of interest and labeling
+Liberia_2014 <-select(Liberia_2014, id, b4, b2, b9, c5, c6, c9, c10, c12, c14,
+                      c15, d1, e6, e7, e8, e10, e13j, e13k, e14b, e17, e31, e37,
+                      f8, f19, f23, b6, b11, b12, b21, b23) %>%
+ rename(
+    sex = b4,
+    age = b2,
+    married = b9,
+    edu_level = c5,
+    exp_level_edu = c6,
+    ideal_work = c9,
+    inter_school = c10,
+    field_edu = c12,
+    work_while_study = c14,
+    intership = c15,
+    employed = d1,
+    where_work = e6,
+    num_employ = e7,
+    remuner = e8,
+    type_contract = e10,
+    social_security = e13j,
+    train = e13k,
+    salary = e14b,
+    salary_freq = e17,
+    satisfaction = e31,
+    union = e37,
+    time_unemployed = f8,
+    reserve_wage = f19,
+    chall_job = f23,
+    prev_resid = b6,
+    child = b11,
+    financial_sit = b12,
+    educ_fath = b21,
+    educ_moth = b23
+) %>%
+  mutate(country = "Liberia")
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Liberia_2014)
+```
+
+```{r include=FALSE}
+base_merge$employed <- ifelse(base_merge$employed==1, 1, 0)
+```
+
+```{r echo=FALSE, warning=TRUE}
+# Establish employed as a categorical variable
+base_merge$employed <- factor(base_merge$employed)
+
+mylogit <- glm(employed ~ sex + age + married + work_while_study + intership + child, data = base_merge, family = "binomial")
+
+glm(employed ~ sex + age + married + work_while_study + intership + child, data = base_merge, family = "binomial") %>%
+  summary() %>%
+  xtable() %>%
+  kable()
+```
+
+## Next steps
+- Complete the data wrangling for the rest of the countries
+- Machine learning techniques to find the best predictable model:
+  - Logit with training and test data
+  - K-Nearest Neighbors
+  - Classification and Regression Trees (CART)
+  - Random Forest
+
+
+
+
+

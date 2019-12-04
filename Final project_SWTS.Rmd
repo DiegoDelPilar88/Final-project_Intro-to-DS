@@ -1,0 +1,207 @@
+---
+title: "Final Project"
+author: "Diego Del Pilar"
+date: "12/2/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/")
+library(haven)
+library(sjlabelled)
+library(tidyverse)
+```
+
+# Background.
+
+
+# Choosing the countries.
+
+I chose countries close to Burkina Faso that are part of the occidental sub-saharian Africa.
+-Benin
+-Liberia
+-Togo
+
+If time remains:
+-Congo
+-Egypt
+-Jordan
+-Malawi
+-Zambia
+-Madagascar
+-Tanzania
+-Tunisia
+-Uganda
+
+# Importing the databases:
+```{r}
+# Databases are in stata
+
+Togo_2014 <- read_dta("Data/Togo_2014.dta") %>%
+  remove_all_labels(.)
+
+Liberia_2014 <- read_dta("Data/Liberia_2014.dta") %>%
+  remove_all_labels(.)
+
+Benin_2014 <- read_dta("Data/Benin_2014.dta") %>%
+  remove_all_labels(.)
+```
+
+# Cleaning data
+
+# Benin 
+```{r}
+#Keeping just variables of interest and labeling
+Benin_2014 <- select(Benin_2014, personid, m01_04, m01_07,m01_08, C05, C06,
+                    C09, C10, C12, C14, C15, D01, E06, E07, E08, E10, E13J, 
+                    E13K, E14Y, E17, E31, E37, F08, F19, F23, b06, b11n, b12,
+                    b21, b23) %>%
+  rename(
+    id = personid,
+    sex = m01_04,
+    age = m01_07,
+    married = m01_08,
+    edu_level = C05,
+    exp_level_edu = C06,
+    ideal_work = C09,
+    inter_school = C10,
+    field_edu = C12,
+    work_while_study = C14,
+    intership = C15,
+    employed = D01,
+    where_work = E06,
+    num_employ = E07,
+    remuner = E08,
+    type_contract = E10,
+    social_security = E13J,
+    train = E13K,
+    salary = E14Y,
+    salary_freq = E17,
+    satisfaction = E31,
+    union = E37,
+    time_unemployed = F08,
+    reserve_wage = F19,
+    chall_job = F23,
+    prev_resid = b06,
+    child = b11n,
+    financial_sit = b12,
+    educ_fath = b21,
+    educ_moth = b23
+) %>%
+  mutate(country = "Benin")
+
+```
+
+# Togo
+```{r}
+#Creating an id
+Togo_2014$id <- paste(Togo_2014$a8, Togo_2014$b1)
+
+#Keeping just variables of interest and labeling
+Togo_2014 <-select(Togo_2014, id, sex, age, b9, c5, c6, c9, c10, c12, c14, c15, d1,
+                   e6, e7, E08, E10, e13j, e13k, e14b, payment_period, E31,
+                   e37, f8, f19a, f23, b6, b11, b12, b21, b23) %>%
+  rename(
+    sex = sex,
+    age = age,
+    married = b9,
+    edu_level = c5,
+    exp_level_edu = c6,
+    ideal_work = c9,
+    inter_school = c10,
+    field_edu = c12,
+    work_while_study = c14,
+    intership = c15,
+    employed = d1,
+    where_work = e6,
+    num_employ = e7,
+    remuner = E08,
+    type_contract = E10,
+    social_security = e13j,
+    train = e13k,
+    salary = e14b,
+    salary_freq = payment_period,
+    satisfaction = E31,
+    union = e37,
+    time_unemployed = f8,
+    reserve_wage = f19a,
+    chall_job = f23,
+    prev_resid = b6,
+    child = b11,
+    financial_sit = b12,
+    educ_fath = b21,
+    educ_moth = b23
+) %>%
+  mutate(country = "Togo")
+```
+
+Merge first two databases
+```{r}
+base_merge <- rbind(Togo_2014, Benin_2014)
+```
+
+# Liberia
+```{r}
+#Creating a new unique id variable
+Liberia_2014<- tibble::rowid_to_column(Liberia_2014, "id")
+
+#Keeping just variables of interest and labeling
+Liberia_2014 <-select(Liberia_2014, id, b4, b2, b9, c5, c6, c9, c10, c12, c14,
+                      c15, d1, e6, e7, e8, e10, e13j, e13k, e14b, e17, e31, e37,
+                      f8, f19, f23, b6, b11, b12, b21, b23) %>%
+ rename(
+    sex = b4,
+    age = b2,
+    married = b9,
+    edu_level = c5,
+    exp_level_edu = c6,
+    ideal_work = c9,
+    inter_school = c10,
+    field_edu = c12,
+    work_while_study = c14,
+    intership = c15,
+    employed = d1,
+    where_work = e6,
+    num_employ = e7,
+    remuner = e8,
+    type_contract = e10,
+    social_security = e13j,
+    train = e13k,
+    salary = e14b,
+    salary_freq = e17,
+    satisfaction = e31,
+    union = e37,
+    time_unemployed = f8,
+    reserve_wage = f19,
+    chall_job = f23,
+    prev_resid = b6,
+    child = b11,
+    financial_sit = b12,
+    educ_fath = b21,
+    educ_moth = b23
+) %>%
+  mutate(country = "Liberia")
+```
+
+Merge the final base
+```{r}
+base_merge <- rbind(base_merge, Liberia_2014)
+```
+
+# Preparing variables for regression analysis
+```{r}
+base_merge$employed <- ifelse(base_merge$employed==1, 1, 0)
+```
+
+# Logit regression
+
+```{r}
+# Establish employed as a categorical variable
+base_merge$employed <- factor(base_merge$employed)
+mylogit <- glm(employed ~ sex + age + married + work_while_study + intership + child, data = base_merge, family = "binomial")
+
+summary(mylogit)
+```
+
+
