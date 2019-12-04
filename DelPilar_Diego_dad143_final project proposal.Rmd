@@ -1,0 +1,63 @@
+---
+title: "Final Project Proposal"
+author: "Diego Del Pilar"
+date: "11/13/2019"
+output: pdf_document
+fontsize: 12pt
+spacing: single
+---
+
+# Statement of the problem.
+
+Youth employment is a major concern of governments across the developing world, where young people are up to four times more likely than adults to be unemployed. In these countries, 85% of the jobs taken by youth belong to informal markets, and a quarter of the youth cannot find a salary above the extreme poverty line, $1.25 per day (Goldin et al., 2015). In addition, the majority of youth are dissatisfied with their employment situation, and want to change jobs, even more so in rural settings and in the agricultural sector (OECD, 2018). For all sectors, the main reason for wanting to change jobs is low pay, followed by the temporary nature of employment and poor working conditions.
+
+\vspace{0.5cm}
+
+To improve youth employment, interventions from the supply and demand side can be done. From the supply side, interventions focus mainly in increasing employment rate and earnings. Programs on skills training and support self-employment have largest effects, although the second one works better. On the demand side, programs have positive effects, although they are small. Those interventions that support the small and medium entrepreneurship (SMEs) are more effective in creating jobs than interventions that address micro-firms. 
+
+\vspace{0.5cm}
+
+With the aim to portray which are the elements that allow a youth to transit from unemployment to employment, the International Labour Organization (ILO) designed the School-to-Work Transition Survey (SWTS). As ILO defined, the SWTS is a unique survey instrument that generates relevant labor market information on young people aged 15 to 29 years, including longitudinal information on transitions within the labor market. The SWTS thus serves as a unique tool for demonstrating the increasingly tentative and indirect paths to decent and productive employment that today’s young men and women are facing.
+
+# Data sources
+ILO webpage will be the source of information. Ideally, the results from surveys applied in 30 countries between 2012 and 2016 will be analyzed. However, the access to those databases needs to be request and there is a chance that I won't get access. If this is the case, the analysis will be done with databases of surveys applied to 10 countries between 2004 and 2006. The countries are: Azerbaijan, China, Egypt, Islamic Republic of Iran, Jordan, Kosovo, Kyrgyzstan, Mongolia, Nepal and Syrian Arab Republic. 
+The website can be retrieved here: 
+https://www.ilo.org/employment/areas/WCMS_234860/lang--en/index.htm
+
+# Methods to use
+Even if databases are easily downloaded from ILO webpage, the extensions are ".xls", ".dta" and ".sav". Therefore, the first step will be to import databases in R format and merge them. The next step will be to clean the data, removing missing values, and to identify the unit of analysis.
+
+\vspace{0.5cm}
+
+Visualization will be done to portray descriptive findings of the data at two levels: aggregate, such as percentage of youth employed in all the countries, and at country level, for example, a comparison of the percentage of young people employed among countries splitted by economic sectors.
+
+\vspace{0.5cm}
+
+Probit model regressions will be run with the objective to identify which variables explain that a youth successfully join the job market.
+
+$$
+\begin{aligned}
+Y = \beta_{0} + \beta_{n} X_{n} + \epsilon
+\end{aligned}
+$$
+Where: 
+\vspace{0.5cm}
+
+* $Y$ is the probability of being employed being a youth
+* $X_{n}$ is a matrix of predictors based on the information from the survey
+
+# Objective
+Using information from SWTS the objective of this project is to identify the characteristics that young people need to have in order to find a job. Furthermore, to identify the characteristics that employers are looking for in a youth to employ her/him will be extremely useful. This will provide policy elements for potential interventions to link young people with labor market from both sides, supply and demand.
+
+\vspace{0.5cm}
+
+In this sense, a success in the project will be if I can provide evidence of which is the youth profile that successfully enroll the job market and which is the weight of each characteristic in the probability of success. For example, if years of education influence the probability to find a job, in which proportion, in average the impact is.
+
+\vspace{5cm}
+
+# References:
+* Goldin, N. & M. Hobson with P. Glick, M. Lundberg, S. Puerto (S4YE). 2015. “Toward Solutions for Youth Employment: A Baseline for 2015.” Solutions for Youth Employment, Washington D.C
+
+* OECD (2018), The Future of Rural Youth in Developing Countries: Tapping the Potential of Local Value Chains, OECD Publishing, Paris.
+
+

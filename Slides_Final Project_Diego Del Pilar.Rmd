@@ -1,0 +1,108 @@
+---
+title: "Determinants of Youth Employment"
+author: "Diego Del Pilar"
+date: "December 4, 2019"
+output: 
+  beamer_presentation:
+    theme: "AnnArbor"
+    colortheme: "dolphin"
+    fonttheme: "structurebold"
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Background
+- Youth employment is a major concern of developing countries governments
+
+- Young people are up to 4x more likely than adults to be unemployed
+
+- In developing countries, 85% of jobs taken by Y belong to informal markets
+
+- A quarter of the Y cannot find a salary above extreme poverty line, $1.25 per day
+
+- But Y are dissatisfied with their employment situation (rural & agricultural) 
+
+- Main reason for wanting to change: low pay, temporary nature of employment & poor working conditions 
+
+
+## Problem statement
+- Policy interventions from supply and demand side can be instrumented
+- The International Labor Organization (ILO) designed the School-to-Work Transition Survey (SWTS):
+  -Provide relevant labor market information on young people aged 15 to 29 years
+
+
+
+
+## 3. Methods to use
+Methods you explored or considered using.
+
+
+
+
+
+## 4. Methods used so far
+The methods/tools you used, and the rationale for their use.
+
+
+
+
+
+## 5. Methods used so far
+The methods/tools you used, and the rationale for their use.
+
+
+
+
+
+## 6. Results
+Show main visuals, analyses/tables, and/or any products built (interactive graphics,
+websites, etc.)
+
+
+
+
+## 7. Results
+Show main visuals, analyses/tables, and/or any products built (interactive graphics,
+websites, etc.)
+
+
+
+
+
+## 8. Results
+Show main visuals, analyses/tables, and/or any products built (interactive graphics,
+websites, etc.)
+
+
+
+
+
+## 10. Lessons learned & plans to face challenges
+
+
+
+
+
+
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
