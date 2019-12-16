@@ -1,9 +1,6 @@
 ---
 title: "Determinants of Youth Employment"
-<<<<<<< HEAD
 subtitle: "Sub-Saharan Africa"
-=======
->>>>>>> a2be6e5a1950ec2ed6ab1c68204d3a5725180517
 author: "Diego Del Pilar"
 date: "December 4, 2019"
 output: 
@@ -11,15 +8,10 @@ output:
     theme: "AnnArbor"
     colortheme: "dolphin"
     fonttheme: "structurebold"
-<<<<<<< HEAD
-=======
-    toc: true
->>>>>>> a2be6e5a1950ec2ed6ab1c68204d3a5725180517
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-<<<<<<< HEAD
 setwd("~/")
 library(haven)
 library(sjlabelled)
@@ -39,27 +31,11 @@ library(xtable)
 \vspace{0.5cm}
 - But youth are dissatisfied with their employment situation (rural & agricultural) and aspire to more 
 \vspace{0.5cm}
-=======
-```
-
-## Background
-- Youth employment is a major concern of developing countries governments
-
-- Young people are up to 4x more likely than adults to be unemployed
-
-- In developing countries, 85% of jobs taken by Y belong to informal markets
-
-- A quarter of the Y cannot find a salary above extreme poverty line, $1.25 per day
-
-- But Y are dissatisfied with their employment situation (rural & agricultural) 
-
->>>>>>> a2be6e5a1950ec2ed6ab1c68204d3a5725180517
 - Main reason for wanting to change: low pay, temporary nature of employment & poor working conditions 
 
 
 ## Problem statement
 - Policy interventions from supply and demand side can be instrumented
-<<<<<<< HEAD
 \vspace{0.5cm}
 - The International Labor Organization (ILO) designed the School-to-Work Transition Survey (SWTS):
   - Provide relevant labor market information on young people aged 15 to 29 years
@@ -282,84 +258,8 @@ glm(employed ~ sex + age + married + work_while_study + intership + child, data 
   - K-Nearest Neighbors
   - Classification and Regression Trees (CART)
   - Random Forest
-=======
-- The International Labor Organization (ILO) designed the School-to-Work Transition Survey (SWTS):
-  -Provide relevant labor market information on young people aged 15 to 29 years
 
 
 
 
-## 3. Methods to use
-Methods you explored or considered using.
-
-
-
-
-
-## 4. Methods used so far
-The methods/tools you used, and the rationale for their use.
-
-
-
-
-
-## 5. Methods used so far
-The methods/tools you used, and the rationale for their use.
-
-
-
-
-
-## 6. Results
-Show main visuals, analyses/tables, and/or any products built (interactive graphics,
-websites, etc.)
-
-
-
-
-## 7. Results
-Show main visuals, analyses/tables, and/or any products built (interactive graphics,
-websites, etc.)
-
->>>>>>> a2be6e5a1950ec2ed6ab1c68204d3a5725180517
-
-
-
-
-<<<<<<< HEAD
-=======
-## 8. Results
-Show main visuals, analyses/tables, and/or any products built (interactive graphics,
-websites, etc.)
-
-
-
-
-
-## 10. Lessons learned & plans to face challenges
-
-
-
-
-
-
-
-## Slide with Bullets
-
-- Bullet 1
-- Bullet 2
-- Bullet 3
-
-## Slide with R Output
-
-```{r cars, echo = TRUE}
-summary(cars)
-```
-
-## Slide with Plot
-
-```{r pressure}
-plot(pressure)
-```
->>>>>>> a2be6e5a1950ec2ed6ab1c68204d3a5725180517
 

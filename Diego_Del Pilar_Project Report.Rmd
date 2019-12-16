@@ -1,0 +1,1026 @@
+---
+title: "Final Project Report"
+subtitle: "Determinants of Youth Employment. Sub-Saharan Africa"
+output: pdf_document
+fontsize: 12pt
+spacing: double
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+setwd("~/")
+library(haven)
+library(sjlabelled)
+library(tidyverse)
+library(knitr)
+library(xtable)
+library(rgdal)
+require(caret) # for machine learning
+require(recipes) # For preprocessing your data
+require(rattle) # For nice tree plots
+library(randomForest)
+# For parallelization (to run the models across many cores) -- speeds up computation!
+# install.packages("doMC")
+doMC::registerDoMC()
+```
+
+# Introduction
+Youth employment is a major concern for governments across the world, considering that young people are up to four times more likely than adults to be unemployed. In developing countries this concern is even stronger given that young people face additional risks such as conflict, black market, crime, drugs, etcetera. Several types of interventions around the world to increase youth employment have been applied, in both, either supply and demand side, however, the consensus is growing that more integrated approaches are needed. 
+
+\vspace{0.2cm}
+
+One of the questions in the literature is which are the elements that allow young people to transit from unemployment to employment. In 2003, the International Labour Organization (ILO) developed the School-to-Work Transition Survey (SWTS) that provides some information to try to answer this question. Using this Survey, the objective of this project is to try to identify if there are particular characteristics that young people who get a job have with respect to those that do not have one. This can provide some policy elements for potential interventions to link young people with labor market.
+
+\vspace{0.2cm}
+
+Finally, it is important to say that this project analyze the results of the surveys applied to more than 27,300 young people in 9 countries in Sub-Saharan Africa.
+
+## Road map of the Project
+First, additional background information for the project will be provided. Then, information about the data, how the databases were gotten and initial data wrangling manipulations will be explained.
+
+\vspace{0.2cm}
+
+As a third point, I will explain some additional wrangling I did after running machine learning techniques, such as removing outliers and missing values. In a fourth point I will show the results of a single logit regression before showing the results after applying machine learning techniques. In the penultimate part of this document, you will read the discussion around the best predictor model from the ML techniques and what those it means. Finally, I will discuss if I succeed in the terms established in the project proposal.
+
+\vspace{0.2cm}
+
+# Problem Statement and Background
+Youth employment is a major concern of governments across the developing world, where young people are up to four times more likely than adults to be unemployed. In these countries, 85% of the jobs taken by youth belong to informal markets, and a quarter of the youth cannot find a salary above the extreme poverty line, $1.25 per day (Goldin et al., 2015). In addition, the majority of youth are dissatisfied with their employment situation, and want to change jobs, even more so in rural settings and in the agricultural sector (OECD, 2018). For all sectors, the main reason for wanting to change jobs is low pay, followed by the temporary nature of employment and poor working conditions.
+
+\vspace{0.2cm}
+
+The 2013 World Development Report (World Bank, 2018) comes to the conclusion that supply-side interventions are likely to be less effective and sustainable without addressing institutional and market failures on the demand-side that affect the entry and growth of firms. According to a 2018 World Bank study, “promoting job creation requires targeted interventions on the demand side that address specific constraints or market failures facing informal sector enterprises, formal sector firms, and farms. Important firm specific constraints or market failures include, insufficient access to finance, capacity and information gaps, coordination failures, and failure to capture social externalities of jobs.” 
+
+\vspace{0.2cm}
+
+To strength future interventions, it is relevant to know who the young are, which are their characteristics and in particular, which are the differences between those who have a job and those that do not. Those difference can be demographic or socioeconomic. This is exactly the aim of this project, try to see if from the SWTS those characteristics can be found. 
+
+# Data
+
+## Source of the data
+With the aim to portray which are the elements that allow a youth to transit from unemployment to employment, the International Labour Organization (ILO) designed the School-to-Work Transition Survey (SWTS). As ILO defined, the SWTS is a unique survey instrument that generates relevant labor market information on young people aged 15 to 29 years, including longitudinal information on transitions within the labor market.
+
+\vspace{0.2cm}
+
+The databases for 33 countries were shared to me by the ILO for this final project. The databases corresponds to countries from different continents, however, for this project, 9 countries from the non Sub-Saharan Africa were chosen: Benin, Liberia,
+Togo, Congo, Malawi, Zambia, Madagascar, Tanzania and Uganda.
+
+\vspace{0.2cm}
+
+The reason for choosing Sub-Saharan Africa is because I am currently working in my capstone project and it is related to youth employment in Burkina Faso. The countries selected preserve similar income conditions as Burkina. It is relevant to say that in the Project Proposal, I mentioned that I would work with the information from the 33 countries for which I have information, however, due to time constraints and because the databases are not exactly the same, I focused in the countries mentioned before.
+
+\vspace{0.2cm}
+
+The unit of observation in this project is each youth among 15 and 29 year old that answered the survey in each of the selected countries.
+
+## Variables of interest
+In average, each survey has around 400 questions. Considering that my objective is to find which characteristics determine that a youth get a job, I chose as dependent variable the dummy "employed". This will allow me to structure models that measure the probability that a youth get a job based on the chosen independent variables.
+
+\vspace{0.2cm}
+
+As independent variables, I chose 13 variables: age, sex, education level, marital status, field of study, if worked while studying, if did internship, if had a reserve wage, if used to live in rural or urban areas, if have children, financial situation at home, and the level of education of both, father and mother. Unfortunately, after wrangling the data and running the ML techniques, I dropped educational level, reserve wage, internship, previous residence area and field of study. Finally, I dropped parents level of education due to inconsistencies in the way the bases are labeling.
+
+## Wrangling data 
+The most challenging part in wrangling the data was to match each variable of interest in the different databases. Even though each database follows in general the same SWTS structure and almost all the questions are the same, the names and labels are different. This implied to go over each database, along the more than 400 questions in the 9 countries, to match each variables of interest.
+
+\vspace{0.2cm} 
+
+Each base was in Stata format, so I changed that to R format and applied a "remove labels" command because labels merged with tittles, complicating the subsequent merge. Then, for each database, I selected just the variables of interest mentioned above and relabeled those. Then I created dummies or categorical variables.
+
+\vspace{0.2cm} 
+
+Finally, I merged all the 9 databases in one, getting a N size of 27,365, distributed this way:  Benin, 4306; Congo, 3276; Liberia, 2416; Madagascar, 3300; Malawi, 3097; Tanzania, 1988; Togo, 2708; Uganda, 3049 and Zambia, 3225. 
+
+```{r Importing databases, include=FALSE}
+# Importing databases that are in Stata format and removing labels
+
+Togo_2014 <- read_dta("Data/Togo_2014.dta") %>%
+  remove_all_labels(.)
+
+Liberia_2014 <- read_dta("Data/Liberia_2014.dta") %>%
+  remove_all_labels(.)
+
+Benin_2014 <- read_dta("Data/Benin_2014.dta") %>%
+  remove_all_labels(.)
+
+Congo_2015 <- read_dta("Data/Congo_2015.dta") %>%
+  remove_all_labels(.)
+
+Malawi_2014 <- read_dta("Data/SWTS_Malawi_2014.dta") %>%
+  remove_all_labels(.)
+
+Zambia_2014 <- read_dta("Data/SWTS_Zambia_2014.dta") %>%
+  remove_all_labels(.)
+
+Madagascar_2012 <- read_dta("Data/Madagascar_final.dta") %>%
+  remove_all_labels(.)
+
+Tanzania_2013 <- read_dta("Data/Tanzania_SWTS.dta") %>%
+  remove_all_labels(.)
+
+Uganda_2015 <- read_dta("Data/Uganda_2015.dta") %>%
+  remove_all_labels(.)
+
+```
+
+```{r Benin, include=FALSE}
+#Benin
+#Keeping just variables of interest and labeling
+Benin_2014 <- select(Benin_2014, personid, m01_07, C05, C12, C14, C15, F19, b04, b06, b09, b11, b12, b21, b23, employed) %>%
+  rename(
+    id = personid,
+    sex = b04, #1=Female, 2=Male
+    age = m01_07,
+    married = b09, #3=Married
+    edu_level = C05, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = C12, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = C14, #1,2 & 3=Yes; 4=No
+    intership = C15, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = F19, #1=Yes, 2=No
+    prev_resid = b06, #1=Rural, 2,3,4 & 5= Urban or other
+    child = b11, #1=Yes, 2=No
+    financial_sit = b12, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = b21, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = b23 #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Benin") #Create a country variable
+
+#Create dummies
+
+Benin_2014$sex[Benin_2014$sex!=1]<-0 
+table(Benin_2014$sex) #sex: 1=Female, 0=Male
+
+Benin_2014$married[Benin_2014$married!=3]<-0 
+Benin_2014$married[Benin_2014$married==3]<-1 
+table(Benin_2014$married) #married: 1=Married, 0=Other
+
+Benin_2014$work_while_study[Benin_2014$work_while_study!=4]<-1 
+Benin_2014$work_while_study[Benin_2014$work_while_study==4]<-0 
+table(Benin_2014$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Benin_2014$intership[Benin_2014$intership==2]<-0 
+table(Benin_2014$intership) #internship: 1=Yes, 0=No
+
+Benin_2014$employed[Benin_2014$employed!=1]<-0 
+table(Benin_2014$employed) #employed: 1=Yes, 0=No
+
+Benin_2014$reserve_wage[Benin_2014$reserve_wage==2]<-0 
+table(Benin_2014$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Benin_2014$prev_resid[Benin_2014$prev_resid!=1]<-0 
+table(Benin_2014$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Benin_2014$child[Benin_2014$child==2]<-0 
+table(Benin_2014$child) #child: 1=Yes, 0=No
+
+```
+
+```{r Togo, include=FALSE}
+#Togo
+
+#Keeping just variables of interest and labeling
+Togo_2014 <- select(Togo_2014, sex, age, b6, b9, b11, b12, b21, b23, c5, c7, c14, c15, f19a, employed ) %>%
+  rename(
+    sex = sex, #1=Female, 2=Male
+    age = age,
+    married = b9, #3=Married
+    edu_level = c5, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = c7, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = c14, #1,2 & 3=Yes; 4=No
+    intership = c15, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = f19a, #1=Yes, 2=No
+    prev_resid = b6, #1=Rural, 2,3,4 & 5= Urban or other
+    child = b11, #1=Yes, 2=No
+    financial_sit = b12, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = b21, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = b23  #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Togo") #Create a country variable
+
+#Creating an id
+Togo_2014<- tibble::rowid_to_column(Togo_2014, "id")
+
+#Create dummies
+
+Togo_2014$sex[Togo_2014$sex!=1]<-0 
+table(Togo_2014$sex) #sex: 1=Female, 0=Male
+
+Togo_2014$married[Togo_2014$married!=3]<-0 
+Togo_2014$married[Togo_2014$married==3]<-1 
+table(Togo_2014$married) #married: 1=Married, 0=Other
+
+Togo_2014$work_while_study[Togo_2014$work_while_study!=4]<-1 
+Togo_2014$work_while_study[Togo_2014$work_while_study==4]<-0 
+table(Togo_2014$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Togo_2014$intership[Togo_2014$intership==2]<-0 
+table(Togo_2014$intership) #internship: 1=Yes, 0=No
+
+Togo_2014$employed[Togo_2014$employed!=1]<-0 
+table(Togo_2014$employed) #employed: 1=Yes, 0=No
+
+Togo_2014$reserve_wage[Togo_2014$reserve_wage==2]<-0 
+table(Togo_2014$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Togo_2014$prev_resid[Togo_2014$prev_resid!=1]<-0 
+table(Togo_2014$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Togo_2014$child[Togo_2014$child!=0]<-1 
+Togo_2014$child[Togo_2014$child==0]<-0 
+table(Togo_2014$child) #child: 1=Yes, 0=No
+
+```
+
+```{r include=FALSE}
+#First merge to test. After this, I merged each additional database to this original database.
+base_merge <- rbind(Togo_2014, Benin_2014)
+```
+
+```{r Liberia, include=FALSE}
+#Liberia
+
+#Keeping just variables of interest and labeling
+
+Liberia_2014 <- select(Liberia_2014, b4, b2, b9, c5, c7, c14, c15, employed, f19, b6, b11, b12, b21, b23) %>%
+  rename(
+    sex = b4, #1=Female, 2=Male
+    age = b2,
+    married = b9, #3=Married
+    edu_level = c5, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = c7, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = c14, #1,2 & 3=Yes; 4=No
+    intership = c15, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = f19, #1=Yes, 2=No
+    prev_resid = b6, #1=Rural, 2,3,4 & 5= Urban or other
+    child = b11, #1=Yes, 2=No
+    financial_sit = b12, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = b21, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = b23  #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Liberia") #Create a country variable
+
+#Creating an id
+Liberia_2014 <- tibble::rowid_to_column(Liberia_2014, "id")
+
+#Create dummies
+
+Liberia_2014$sex[Liberia_2014$sex!=1]<-0 
+table(Liberia_2014$sex) #sex: 1=Female, 0=Male
+
+Liberia_2014$married[Liberia_2014$married!=3]<-0 
+Liberia_2014$married[Liberia_2014$married==3]<-1 
+table(Liberia_2014$married) #married: 1=Married, 0=Other
+
+Liberia_2014$work_while_study[Liberia_2014$work_while_study!=4]<-1 
+Liberia_2014$work_while_study[Liberia_2014$work_while_study==4]<-0 
+table(Liberia_2014$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Liberia_2014$intership[Liberia_2014$intership==2]<-0 
+table(Liberia_2014$intership) #internship: 1=Yes, 0=No
+
+Liberia_2014$employed[Liberia_2014$employed!=1]<-0 
+table(Liberia_2014$employed) #employed: 1=Yes, 0=No
+
+Liberia_2014$reserve_wage[Liberia_2014$reserve_wage==2]<-0 
+table(Liberia_2014$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Liberia_2014$prev_resid[Liberia_2014$prev_resid!=1]<-0 
+table(Liberia_2014$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Liberia_2014$child[Liberia_2014$child==2]<-0 
+table(Liberia_2014$child) #child: 1=Yes, 0=No
+
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Liberia_2014)
+table(base_merge$country)
+```
+
+```{r Congo, include=FALSE}
+#Congo
+
+#Keeping just variables of interest and labeling
+Congo_2015 <- select(Congo_2015, sex, age, B9, C5, C7, C14, C15, employed, F19, B6, B11, B12, B21, B23) %>%
+  rename(
+    sex = sex, #1=Female, 2=Male
+    age = age,
+    married = B9, #3=Married
+    edu_level = C5, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = C7, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = C14, #1,2 & 3=Yes; 4=No
+    intership = C15, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = F19, #1=Yes, 2=No
+    prev_resid = B6, #1=Rural, 2,3,4 & 5= Urban or other
+    child = B11, #1=Yes, 2=No
+    financial_sit = B12, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = B21, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = B23  #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Congo") #Create a country variable
+
+#Creating an id
+Congo_2015<- tibble::rowid_to_column(Congo_2015, "id")
+
+#Create dummies
+
+Congo_2015$sex[Congo_2015$sex!=1]<-0 
+table(Congo_2015$sex) #sex: 1=Female, 0=Male
+
+Congo_2015$married[Congo_2015$married!=3]<-0 
+Congo_2015$married[Congo_2015$married==3]<-1 
+table(Congo_2015$married) #married: 1=Married, 0=Other
+
+Congo_2015$work_while_study[Congo_2015$work_while_study!=4]<-1 
+Congo_2015$work_while_study[Congo_2015$work_while_study==4]<-0 
+table(Congo_2015$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Congo_2015$intership[Congo_2015$intership==2]<-0 
+table(Congo_2015$intership) #internship: 1=Yes, 0=No
+
+Congo_2015$employed[Congo_2015$employed!=1]<-0 
+table(Congo_2015$employed) #employed: 1=Yes, 0=No
+
+Congo_2015$reserve_wage[Congo_2015$reserve_wage==2]<-0 
+table(Congo_2015$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Congo_2015$prev_resid[Congo_2015$prev_resid!=1]<-0 
+table(Congo_2015$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Congo_2015$child[Congo_2015$child==2]<-0 
+table(Congo_2015$child) #child: 1=Yes, 0=No
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Congo_2015)
+table(base_merge$country)
+```
+
+```{r Malawi, include=FALSE}
+#Malawi
+
+#Keeping just variables of interest and labeling
+Malawi_2014 <- select(Malawi_2014, B04, B02, B09, C05, C12, C14, C15, employed, F19, B06, B11, B12, B21, B23) %>%
+  rename(
+    sex = B04, #1=Female, 2=Male
+    age = B02,
+    married = B09, #3=Married
+    edu_level = C05, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = C12, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = C14, #1,2 & 3=Yes; 4=No
+    intership = C15, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = F19, #1=Yes, 2=No
+    prev_resid = B06, #1=Rural, 2,3,4 & 5= Urban or other
+    child = B11, #1=Yes, 2=No
+    financial_sit = B12, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = B21, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = B23 #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Malawi") #Create a country variable
+
+#Creating an id
+Malawi_2014<- tibble::rowid_to_column(Malawi_2014, "id")
+
+#Create dummies
+Malawi_2014$sex[Malawi_2014$sex!=1]<-0 
+table(Malawi_2014$sex) #sex: 1=Female, 0=Male
+
+Malawi_2014$married[Malawi_2014$married!=3]<-0 
+Malawi_2014$married[Malawi_2014$married==3]<-1 
+table(Malawi_2014$married) #married: 1=Married, 0=Other
+
+Malawi_2014$work_while_study[Malawi_2014$work_while_study!=4]<-1 
+Malawi_2014$work_while_study[Malawi_2014$work_while_study==4]<-0 
+table(Malawi_2014$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Malawi_2014$intership[Malawi_2014$intership==2]<-0 
+table(Malawi_2014$intership) #internship: 1=Yes, 0=No
+
+Malawi_2014$employed[Malawi_2014$employed!=1]<-0 
+table(Malawi_2014$employed) #employed: 1=Yes, 0=No
+
+Malawi_2014$reserve_wage[Malawi_2014$reserve_wage==2]<-0 
+table(Malawi_2014$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Malawi_2014$prev_resid[Malawi_2014$prev_resid!=1]<-0 
+table(Malawi_2014$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Malawi_2014$child[Malawi_2014$child==2]<-0 
+table(Malawi_2014$child) #child: 1=Yes, 0=No
+
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Malawi_2014)
+table(base_merge$country)
+```
+
+```{r Zambia, include=FALSE}
+#Zambia
+
+#Keeping just variables of interest and labeling
+Zambia_2014 <- select(Zambia_2014, sex, age, marital, level_training, field_edu_done, work_studying, intern_appr, employed, f19, area_previously, children, b12, father_edu, mother_edu) %>%
+  rename(
+    sex = sex, #1=Female, 2=Male
+    age = age,
+    married = marital, #3=Married
+    edu_level = level_training, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = field_edu_done, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = work_studying, #1,2 & 3=Yes; 4=No
+    intership = intern_appr, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = f19, #1=Yes, 2=No
+    prev_resid = area_previously, #1=Rural, 2,3,4 & 5= Urban or other
+    child = children, #1=Yes, 2=No
+    financial_sit = b12, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = father_edu, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = mother_edu #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Zambia") #Create a country variable
+
+#Creating an id
+Zambia_2014<- tibble::rowid_to_column(Zambia_2014, "id")
+
+#Create dummies
+
+Zambia_2014$sex[Zambia_2014$sex!=1]<-0 
+table(Zambia_2014$sex) #sex: 1=Female, 0=Male
+
+Zambia_2014$married[Zambia_2014$married!=3]<-0 
+Zambia_2014$married[Zambia_2014$married==3]<-1 
+table(Zambia_2014$married) #married: 1=Married, 0=Other
+
+Zambia_2014$work_while_study[Zambia_2014$work_while_study!=4]<-1 
+Zambia_2014$work_while_study[Zambia_2014$work_while_study==4]<-0 
+table(Zambia_2014$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Zambia_2014$intership[Zambia_2014$intership==2]<-0 
+table(Zambia_2014$intership) #internship: 1=Yes, 0=No
+
+Zambia_2014$employed[Zambia_2014$employed!=1]<-0 
+table(Zambia_2014$employed) #employed: 1=Yes, 0=No
+
+Zambia_2014$reserve_wage[Zambia_2014$reserve_wage==2]<-0 
+table(Zambia_2014$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Zambia_2014$prev_resid[Zambia_2014$prev_resid!=1]<-0 
+table(Zambia_2014$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Zambia_2014$child[Zambia_2014$child==2]<-0 
+table(Zambia_2014$child) #child: 1=Yes, 0=No
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Zambia_2014)
+table(base_merge$country)
+```
+
+```{r Madagascar, include=FALSE}
+#Madagascar
+
+#Keeping just variables of interest and labeling
+Madagascar_2012 <- select(Madagascar_2012, b4_sexe, b3_age, b10_sitm, c3, c7, c28, c30, employed, d60_1, b6_lieu_, b13_enf, b14_sitf, b24_nivp, b26_nivm) %>%
+  rename(
+    sex = b4_sexe, #1=Female, 2=Male
+    age = b3_age,
+    married = b10_sitm, #3=Married
+    edu_level = c3, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = c7, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = c28, #1,2 & 3=Yes; 4=No
+    intership = c30, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = d60_1, #1=Yes, 2=No
+    prev_resid = b6_lieu_, #1=Rural, 2,3,4 & 5= Urban or other
+    child = b13_enf, #1=Yes, 2=No
+    financial_sit = b14_sitf, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = b24_nivp, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = b26_nivm  #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Madagascar") #Create a country variable
+
+#Creating an id
+Madagascar_2012<- tibble::rowid_to_column(Madagascar_2012, "id")
+
+#Create dummies
+
+Madagascar_2012$sex[Madagascar_2012$sex!=1]<-0 
+table(Madagascar_2012$sex) #sex: 1=Female, 0=Male
+
+Madagascar_2012$married[Madagascar_2012$married!=3]<-0 
+Madagascar_2012$married[Madagascar_2012$married==3]<-1 
+table(Madagascar_2012$married) #married: 1=Married, 0=Other
+
+Madagascar_2012$work_while_study[Madagascar_2012$work_while_study!=4]<-1 
+Madagascar_2012$work_while_study[Madagascar_2012$work_while_study==4]<-0 
+table(Madagascar_2012$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Madagascar_2012$intership[Madagascar_2012$intership==2]<-0 
+table(Madagascar_2012$intership) #internship: 1=Yes, 0=No
+
+Madagascar_2012$employed[Madagascar_2012$employed!=1]<-0 
+table(Madagascar_2012$employed) #employed: 1=Yes, 0=No
+
+Madagascar_2012$reserve_wage[Madagascar_2012$reserve_wage==2]<-0 
+table(Madagascar_2012$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Madagascar_2012$prev_resid[Madagascar_2012$prev_resid!=1]<-0 
+table(Madagascar_2012$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Madagascar_2012$child[Madagascar_2012$child!=0]<-1 
+Madagascar_2012$child[Madagascar_2012$child==0]<-0 
+table(Madagascar_2012$child) #child: 1=Yes, 0=No
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Madagascar_2012)
+table(base_merge$country)
+```
+
+```{r Tanzania, include=FALSE}
+#Tanzania
+
+#Keeping just variables of interest and labeling
+Tanzania_2013 <- select(Tanzania_2013, sex, age, qb10marital, qc4level_training, qc7field_edu, qc28work_studying, qc30intern_appr, employed, qd60amin, qb6area_previously, qb13children, qb14hh_situ_financial, qb24father_edu, qb26mother_edu) %>%
+  rename(
+    sex = sex, #1=Female, 2=Male
+    age = age,
+    married = qb10marital, #3=Married
+    edu_level = qc4level_training, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = qc7field_edu, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = qc28work_studying, #1,2 & 3=Yes; 4=No
+    intership = qc30intern_appr, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = qd60amin, #1=Yes, 2=No
+    prev_resid = qb6area_previously, #1=Rural, 2,3,4 & 5= Urban or other
+    child = qb13children, #1=Yes, 2=No
+    financial_sit = qb14hh_situ_financial, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = qb24father_edu, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = qb26mother_edu  #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Tanzania") #Create a country variable
+
+#Creating an id
+Tanzania_2013<- tibble::rowid_to_column(Tanzania_2013, "id")
+
+#Create dummies
+Tanzania_2013$sex[Tanzania_2013$sex!=1]<-0 
+table(Tanzania_2013$sex) #sex: 1=Female, 0=Male
+
+Tanzania_2013$married[Tanzania_2013$married!=3]<-0 
+Tanzania_2013$married[Tanzania_2013$married==3]<-1 
+table(Tanzania_2013$married) #married: 1=Married, 0=Other
+
+Tanzania_2013$work_while_study[Tanzania_2013$work_while_study!=4]<-1 
+Tanzania_2013$work_while_study[Tanzania_2013$work_while_study==4]<-0 
+table(Tanzania_2013$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Tanzania_2013$intership[Tanzania_2013$intership==2]<-0 
+table(Tanzania_2013$intership) #internship: 1=Yes, 0=No
+
+Tanzania_2013$employed[Tanzania_2013$employed!=1]<-0 
+table(Tanzania_2013$employed) #employed: 1=Yes, 0=No
+
+Tanzania_2013$reserve_wage[Tanzania_2013$reserve_wage==2]<-0 
+table(Tanzania_2013$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Tanzania_2013$prev_resid[Tanzania_2013$prev_resid!=1]<-0 
+table(Tanzania_2013$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Tanzania_2013$child[Tanzania_2013$child==2]<-0 
+table(Tanzania_2013$child) #child: 1=Yes, 0=No
+
+```
+
+```{r include=FALSE}
+base_merge <- rbind(base_merge, Tanzania_2013)
+table(base_merge$country)
+```
+
+```{r Uganda, include=FALSE}
+#Uganda
+
+#Keeping just variables of interest and labeling
+Uganda_2015 <- select(Uganda_2015, sex, age, b10, c4, c12, c14, c15, employed, f19a, b8, b12, b13, b23, b25) %>%
+  rename(
+    sex = sex, #1=Female, 2=Male
+    age = age,
+    married = b10, #3=Married
+    edu_level = c4, #1=None, 2=Elementary, 4=Secundary, 6=University
+    field_edu = c12, #1=General programmes, 2=Education, 3=Arts and literature,                          4=Social sciences, management, law; 5=Sciences, math, ICT;                         6=Engineering, 7=Agriculture, veterinary sciences; 8=Health,                       social protection, 9=Services; 99=Other
+    work_while_study = c14, #1,2 & 3=Yes; 4=No
+    intership = c15, #1=Yes, 2=No
+    employed = employed, #1=Yes, 2 & 9=No
+    reserve_wage = f19a, #1=Yes, 2=No
+    prev_resid = b8, #1=Rural, 2,3,4 & 5= Urban or other
+    child = b12, #1=Yes, 2=No
+    financial_sit = b13, #1=Easy, 2=Quite easy, 3=In lign with the national                                  average, 4=Quite difficult, 5=Difficult
+    educ_fath = b23, #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other
+    educ_moth = b25 #1=No schooling, 2=Primary education, 3=Secundary professional                       education, 4=Secundary general education, 5=Post-secundary                         education, 6=University education, 7=I don't know, 8=Other 
+) %>%
+  mutate(country = "Uganda") #Create a country variable
+
+#Creating an id
+Uganda_2015<- tibble::rowid_to_column(Uganda_2015, "id")
+
+#Create dummies
+
+Uganda_2015$sex[Uganda_2015$sex!=1]<-0 
+table(Uganda_2015$sex) #sex: 1=Female, 0=Male
+
+Uganda_2015$married[Uganda_2015$married!=3]<-0 
+Uganda_2015$married[Uganda_2015$married==3]<-1 
+table(Uganda_2015$married) #married: 1=Married, 0=Other
+
+Uganda_2015$work_while_study[Uganda_2015$work_while_study!=4]<-1 
+Uganda_2015$work_while_study[Uganda_2015$work_while_study==4]<-0 
+table(Uganda_2015$work_while_study) #work_while_study: 1=Yes, 0=No
+
+Uganda_2015$intership[Uganda_2015$intership==2]<-0 
+table(Uganda_2015$intership) #internship: 1=Yes, 0=No
+
+Uganda_2015$employed[Uganda_2015$employed!=1]<-0 
+table(Uganda_2015$employed) #employed: 1=Yes, 0=No
+
+Uganda_2015$reserve_wage[Uganda_2015$reserve_wage==2]<-0 
+table(Uganda_2015$reserve_wage) #reserve_wage: 1=Yes, 0=No
+
+Uganda_2015$prev_resid[Uganda_2015$prev_resid!=1]<-0 
+table(Uganda_2015$prev_resid) #prev_resid: 1=Rural, 0=Other
+
+Uganda_2015$child[Uganda_2015$child!=0]<-1 
+Uganda_2015$child[Uganda_2015$child==0]<-0 
+table(Uganda_2015$child) #child: 1=Yes, 0=No
+```
+
+```{r Final merge, include=FALSE}
+base_merge <- rbind(base_merge, Uganda_2015)
+print(table(base_merge$country))
+```
+
+```{r eval=FALSE, fig.height=10, fig.width=8, warning=FALSE, include=FALSE, r,fig.height=10}
+
+graph_distr1 <- base_merge %>% 
+  select_if(is.numeric) %>% 
+  gather(var,val) %>% 
+  ggplot(aes(val,group=var)) +
+  geom_histogram(bins = 30) +
+  facet_wrap(~var,scales="free",ncol=2)
+
+print(graph_distr1)
+```
+
+## Extra wrangling
+In the process of running ML techniques, I identified some outliers in the data and variables with many missing values. 
+
+Variables with outliers:Remove age>29. Remove financial_sit>5
+
+Variables with many missing values:edu_level: 25,529; reserve_wage: 20,853; internship: 18,730; prev_resid: 21,518; field_edu: 16,182
+
+```{r include=FALSE}
+#Remove age>29
+base_merge2 <- subset(base_merge,!age>29) %>%
+  subset(.,!financial_sit>5)
+table(base_merge2$age)
+table(base_merge2$financial_sit)
+```
+
+Given this, I built a new database, removing the problematic variables. As a final manipulation, I removed all the missing values.
+```{r include=FALSE}
+#See missing values
+print(sum(is.na(base_merge2$employed)))
+print(sum(is.na(base_merge2$sex)))
+print(sum(is.na(base_merge2$age)))
+print(sum(is.na(base_merge2$married)))
+print(sum(is.na(base_merge2$edu_level)))
+print(sum(is.na(base_merge2$work_while_study)))
+print(sum(is.na(base_merge2$reserve_wage)))
+print(sum(is.na(base_merge2$intership)))
+print(sum(is.na(base_merge2$prev_resid)))
+print(sum(is.na(base_merge2$financial_sit)))
+print(sum(is.na(base_merge2$educ_fath)))
+print(sum(is.na(base_merge2$educ_moth)))
+print(sum(is.na(base_merge2$field_edu)))
+
+table(base_merge2$edu_level)
+table(base_merge2$educ_fath)
+table(base_merge2$educ_moth)
+
+base_merge2 <- select(base_merge2, -edu_level, -reserve_wage, -intership, -prev_resid, -educ_fath, -educ_moth, -field_edu, -id, -country) %>%
+  rename(work_while.study=work_while_study)
+```
+
+```{r include=FALSE}
+sum(is.na(base_merge2))
+```
+
+```{r include=FALSE}
+#Remove missing values:
+base_merge2 <- na.omit(base_merge2) 
+sum(is.na(base_merge2))
+```
+
+# Analysis
+
+## The model
+
+$$
+\begin{aligned}
+Y = \beta_{0} + \beta_{n} X_{n} + \epsilon
+\end{aligned}
+$$
+Where: 
+\vspace{0.2cm}
+
+* $Y$ is the probability of a youth to being employed 
+* $X_{n}$ is a matrix of predictors based on the information from the survey
+
+At this point, we know that our predictors are: **Sex of the youth**: 1 if women, 0 if male. This coefficient will provide information about gender gap, this is, if there is a higher probability for a male to get a job. **Age**: this is a numeric variable between 15 and 29 years. We expect that the older the higher the probability to get a job. **Married**: 1 if married, 0 if not. We expect a higher probability to have a job for those who are married with respect to those who are not. **Work while study**: 1 if worked while studying, 0 if not. We expect that those that worked while studying have higher probability to be employed. **Having children**: 1 if they have kids, 0 if not. We expect that those who have kids have a higher probability to have a work. **Financial situation**: categorical variable that increase from the easiest situation to a tough one. We expect a positive relation, the hardest the situation, the strongest the motivation to get a job.
+
+\vspace{0.2cm}
+
+## Logit regression
+
+This is a simple logit regression to see the the results of the expected model
+
+```{r include=FALSE}
+# Establish employed as a categorical variable
+base_merge2$employed[base_merge2$employed==1]<- "yes" 
+base_merge2$employed[base_merge2$employed==0]<- "no" 
+
+table(base_merge2$employed) #employed: 1=Yes, 2=No
+
+base_merge2$employed<-factor(base_merge2$employed) 
+class(base_merge2$employed)
+```
+
+```{r echo=FALSE, warning=TRUE}
+mylogit <- glm(employed ~ sex + age + married + work_while.study + child + financial_sit, data = base_merge2, family = "binomial")
+
+glm(employed ~ sex + age + married + work_while.study + child + financial_sit, data = base_merge2, family = "binomial") %>%
+  summary() %>%
+  xtable() %>%
+  kable()
+```
+
+Looking at the coefficients from the logit regression, all of them threw the expected results excepting for sex. Recall that sex is labeled as 1 for female, therefore, this result says that there is a slightly higher probability to have a job, in average, if being a female. From the other results, it is interesting to see that those that worked while studying and those with children have strongly higher probabilities to have a job with respect to those that did not worked or have no children.
+
+## Machine learning Techniques (MLT)
+As mentioned before, the MLT follow the same model but under supervised techniques. These are used to predict or explain the relation among variables. We will apply 4 techniques: a new logistic regression, K-Nearest Neighbors, Classification and Regression Trees and Random Forest. Along each technique an explanation will be provided.
+
+The first step is to split the data in training (80%) and test (20%) data set. Since this is a random partition, it is expected that the results would be the same in both partitions.
+
+```{r include=FALSE}
+index = createDataPartition(base_merge2$employed,p=.8,list=F) 
+train_data = base_merge2[index,] # Use 80% of the data as training data 
+test_data = base_merge2[-index,] # holdout 20% as test data 
+
+dim(train_data)
+dim(test_data) 
+```
+
+After the partition, let's take a look on the distribution for each variable for the train data set. Most of them are binary so we expect to have data in zero and one. Doing this before, allowed me to identify outliers and missing values.
+
+```{r echo=FALSE, fig.height=6, fig.width=6, message=FALSE, warning=FALSE}
+train_data %>% 
+  select_if(is.numeric) %>% 
+  gather(var,val) %>% 
+  ggplot(aes(val,group=var)) +
+  geom_histogram(bins = 30) +
+  facet_wrap(~var,scales="free",ncol=2)
+```
+
+The changes to our data are saved in a "recipe" so we can then apply this instructions to other data sets. In this case we apply the "recipe" to our train and test data. Some of the changes that I did before was to change the dependent variable from numbers to text, that it is from 1 to "yes" and 0 to "no". As well, although not relevant for this porpoise, the variable "country" that refers to the country of each youth, change from a categorical variable to a dummy for each country.
+
+```{r include=FALSE}
+rcp <- 
+  recipe(employed ~  .,train_data) %>% 
+  step_dummy(all_nominal(),-all_outcomes()) %>% 
+  step_range(all_numeric()) %>%  # Normalize scale
+  prep()
+
+# Apply the recipe to the training and test data
+train_data2 <- bake(rcp,train_data)
+test_data2 <- bake(rcp,test_data) 
+```
+
+```{r include=FALSE}
+#Check that our pre-processing worked. 
+head(train_data2)
+```
+
+## Cross-validation
+
+When comparing different machine learning models, we want to be sure that we're making a fair and equal comparison. One way that random chance can sneak into our assessments of model fit is through cross-validation. We want to make sure that we're cross-validating the data on the exact same data partitions. In this case, I used the k-fold cross-validation method with 5 folds in the data, getting groups of around 3,600 observations.
+```{r}
+set.seed(1988) # set a seed for replication purposes 
+
+folds <- createFolds(train_data2$employed, k = 5) # Partition the data into 10 equal folds
+
+sapply(folds,length)
+```
+
+Then, I set up the validations conditions. Here we establish that all the process that will be run in the MLT, have to consider a cross validation among the 5 folds we just created. Likewise, I set up that we are dealing with a classification problem, that it is, that our outcome is either have a job or not.
+
+```{r}
+control_conditions <- 
+  trainControl(method='cv', # K-fold cross validation
+               summaryFunction = twoClassSummary, # Need this b/c it's a classification problem
+               classProbs = TRUE, # Need this b/c it's a classification problem
+               index = folds # The indices for our folds (so they are always the same)
+  )
+```
+
+# Models
+To run the models, I used a powerful R package named "caret". The performance measure that I will use to determine the model that best perform is the Receiver Operating Characteristics or ROC, given that this is a classification problem.
+
+ROC is a probability curve. It tells how much a model is capable of distinguishing between classes. Higher the area under the curve, better the model is at predicting 0s as 0s and 1s as 1s. In our example, to identify if a unemployed youth is correctly classified as unemployed and if an employed one is correctly classified as employed.
+
+## Logistic Regression
+The difference in this logistic regression from the first showed above is that here we are only focus in the ROC, in order to compare with the other models. The ROC for this model is 0.7416589.
+
+```{r}
+mod_logit <-
+  train(employed ~ sex + age + married + work_while.study + child + financial_sit, 
+        data=train_data2, # Training data 
+        method = "glm", # logit function
+        metric = "ROC", # area under the curve
+        trControl = control_conditions
+  )
+mod_logit
+```
+
+## K-Nearest Neighbors
+
+This algorithm assumes that similar things exist in close proximity. In other words, similar things are near to each other and are classified in "neighbors". This model plays with the number of K neighbors and provide a ROC for each of them. 
+
+As we will see in the results and in the graph below, a k=9 provides a higher ROC than k=5 but, once we go over k=10, the increase in ROC turns smaller for each additional neighbor. The highest ROC=0.7212098 for this model was with k=9, higher than in the logistic regression.
+
+```{r}
+mod_knn <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "knn", # K-Nearest Neighbors Algorithm
+        metric = "ROC", # area under the curve
+        trControl = control_conditions
+  )
+```
+
+```{r}
+mod_knn
+```
+
+```{r fig.height=4, fig.width=4}
+plot(mod_knn)
+```
+
+```{r include=FALSE}
+knn_tune = expand.grid(k = c(1,3,10,50))
+knn_tune
+```
+
+```{r}
+mod_knn2 <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "knn", # K-Nearest Neighbors Algorithm
+        metric = "ROC", # area under the curve
+        tuneGrid = knn_tune, # add the tuning parameters here 
+        trControl = control_conditions
+  )
+```
+
+```{r eval=FALSE, fig.height=4, fig.width=4, include=FALSE}
+plot(mod_knn2)
+```
+
+## Classification and Regression Trees (CART)
+This model follows the logic of binary decision trees and the model is used to identify the "class" within which a target variable would likely fall into. In this example, the model identified that the class "having children" and "work while studying" were the best classifications to predict the probability of a youth to get a job.
+
+```{r}
+mod_cart <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "rpart", # Classification Tree
+        metric = "ROC", # area under the curve
+        trControl = control_conditions
+  )
+```
+
+
+```{r fig.height=4, fig.width=4, include=FALSE}
+plot(mod_cart)
+```
+
+Decision tree:
+
+```{r fig.height=4, fig.width=4}
+fancyRpartPlot(mod_cart$finalModel)
+```
+
+```{r}
+print(mod_cart$finalModel)
+```
+
+```{r}
+tune_cart2 <- expand.grid(cp = c(0.0010281)) # Complexity Parameter (how "deep" our trees should grow)
+mod_cart2 <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "rpart", # Classification Tree
+        metric = "ROC", # area under the curve
+        tuneGrid = tune_cart2, # Tuning parameters
+        trControl = control_conditions
+  )
+
+```
+
+```{r eval=FALSE, fig.align='center', include=FALSE}
+#I won't show in the final report this tree
+fancyRpartPlot(mod_cart2$finalModel)
+```
+
+## Random Forest
+A Random Forest process is basically running several CART models or decision trees, playing with different variables and different sets of the database, taking the average of all of them instead of just choosing one. 
+
+```{r}
+mod_rf <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "ranger", # random forest (ranger is much faster than rf)
+        metric = "ROC", # area under the curve
+        importance = "permutation",
+        trControl = control_conditions
+  )
+```
+
+As we can see in the output table, the RF with the highest ROC is 0.7414514 with 2 predictors randomly selected and nodes splitted by "extratrees" as tuning parameter.
+```{r}
+mod_rf
+```
+
+```{r eval=FALSE, include=FALSE}
+plot(mod_rf)
+```
+  
+# Results
+Based on the next plot, I conclude that the MLT that provides the higher ROC, this is, the highest correct classification of employed and unemployed young population based on the selected independent variables are the Random Forest model and logit regression. The difference in ROC is slightly different in favor of logit model, however, I will stick with RF as my predilection model.
+
+```{r,fig.width=12,fig.height=4}
+# Organize all model imputs as a list.
+mod_list <-
+  list(
+    logit = mod_logit,
+    knn1 = mod_knn,
+    knn2 = mod_knn2,
+    cart = mod_cart,
+    cart2 = mod_cart2,
+    rf = mod_rf
+  )
+
+# Generate Plot to compare output. 
+dotplot(resamples(mod_list),metric = 'ROC')
+```
+
+In the next confusion matrix we can see those young people that was correctly classified as employed or unemployed running the predict parameters in the Random Forest over the test data. The classification accuracy is 67%.
+  
+```{r echo=FALSE}
+pred <- predict(mod_rf,newdata = test_data2)
+confusionMatrix(pred, test_data2$employed)
+```
+
+Finally, the most relevant variables for the Random Forest process are: if the youth had children, if they worked while studying and if they were married.
+```{r echo=FALSE}
+varImp(mod_rf)
+```
+  
+# Conclusion
+In the project proposal I establish as "success" if I can provide evidence of which is the youth profile that successfully enroll the job market and which is the weight of each characteristic in the probability of success. For example, if years of education influence the probability to find a job, in which proportion, in average the impact is.
+
+\vspace{0.5cm}
+
+What I can conclude is that I partially succeed. From the failure side, I couldn't use variables that I considered relevant at the beginning such as years of education or if the youth live in urban or rural ares, however, this is because of the quality of the data. As well, I expected to be able to provide the weight of influence of each independent variable in the probability of get a job but I failed.
+
+\vspace{0.5cm}
+
+However, from the success side, the model I proposed, after Random Forest process, can predict successfully the 67% of correct classification as employed or unemployed. In this sense, even though I couldn't provide a weight, I am able to say that the most predictive variables are if the youth have children, if they worked while studying, their age and if they are married.
+
+\vspace{0.5cm}
+
+In terms of public policy interventions, which was my main interest, I don't get very relevant conclusions, but interesting confirmations from previous studies can be provided, nonetheless. For example, that in the context of Sub-Saharan countries, having a job while studying increase the chance to get a job after school. This outcome can be used to support part time jobs programs for young people while studying.
+\vspace{0.5cm}
+**Note:** Each time I knit the document, all the ML results change and the best model change as well as the ROC, confusion matrix, etcetera. Just to let you know that my results and conclusions are over a knit version different to this.
+\vspace{0.5cm}
+
+# References:
+* World Bank. 2018. Integrated Youth Employment Programs – A Stock-take of Evidence on what work in Youth Employment programs, p. 24
+
+* Goldin, N. & M. Hobson with P. Glick, M. Lundberg, S. Puerto (S4YE). 2015. “Toward Solutions for Youth Employment: A Baseline for 2015.” Solutions for Youth Employment, Washington D.C
+
+* OECD (2018), The Future of Rural Youth in Developing Countries: Tapping the Potential of Local Value Chains, OECD Publishing, Paris.
+
+
