@@ -1,5 +1,6 @@
 ---
-title: "R Notebook"
+title: "Final Project Report"
+subtitle: "Determinants of Youth Employment. Sub-Saharan Africa"
 output: pdf_document
 fontsize: 12pt
 spacing: double
@@ -17,84 +18,80 @@ library(rgdal)
 require(caret) # for machine learning
 require(recipes) # For preprocessing your data
 require(rattle) # For nice tree plots
+library(randomForest)
 # For parallelization (to run the models across many cores) -- speeds up computation!
 # install.packages("doMC")
 doMC::registerDoMC()
 ```
 
-## Introduction
-– What is the aim of the project?
-  - Summarize the problem
-  - State your goals
-– What do you do in this report?
-  - Offer a roadmap of the project
+# Introduction
+Youth employment is a major concern for governments across the world, considering that young people are up to four times more likely than adults to be unemployed. In developing countries this concern is even stronger given that young people face additional risks such as conflict, black market, crime, drugs, etcetera. Several types of interventions around the world to increase youth employment have been applied, in both, either supply and demand side, however, the consensus is growing that more integrated approaches are needed. 
 
+\vspace{0.2cm}
 
-# Statement of the problem
+One of the questions in the literature is which are the elements that allow young people to transit from unemployment to employment. In 2003, the International Labour Organization (ILO) developed the School-to-Work Transition Survey (SWTS) that provides some information to try to answer this question. Using this Survey, the objective of this project is to try to identify if there are particular characteristics that young people who get a job have with respect to those that do not have one. This can provide some policy elements for potential interventions to link young people with labor market.
 
-  
-# Goals
-Using information from SWTS the objective of this project is to identify the characteristics that young people need to have in order to find a job. Furthermore, to identify the characteristics that employers are looking for in a youth to employ her/him will be extremely useful. This will provide policy elements for potential interventions to link young people with labor market from both sides, supply and demand.
+\vspace{0.2cm}
 
-  
-## Problem Statement and Background
+Finally, it is important to say that this project analyze the results of the surveys applied to more than 27,300 young people in 9 countries in Sub-Saharan Africa.
 
-– Give a clear and complete statement of the problem and/or aim of your analysis.
-– Include a brief summary of any related work that has tried to tackle a project
-similar to yours (i.e. a light literature review)
+## Road map of the Project
+First, additional background information for the project will be provided. Then, information about the data, how the databases were gotten and initial data wrangling manipulations will be explained.
 
+\vspace{0.2cm}
+
+As a third point, I will explain some additional wrangling I did after running machine learning techniques, such as removing outliers and missing values. In a fourth point I will show the results of a single logit regression before showing the results after applying machine learning techniques. In the penultimate part of this document, you will read the discussion around the best predictor model from the ML techniques and what those it means. Finally, I will discuss if I succeed in the terms established in the project proposal.
+
+\vspace{0.2cm}
+
+# Problem Statement and Background
 Youth employment is a major concern of governments across the developing world, where young people are up to four times more likely than adults to be unemployed. In these countries, 85% of the jobs taken by youth belong to informal markets, and a quarter of the youth cannot find a salary above the extreme poverty line, $1.25 per day (Goldin et al., 2015). In addition, the majority of youth are dissatisfied with their employment situation, and want to change jobs, even more so in rural settings and in the agricultural sector (OECD, 2018). For all sectors, the main reason for wanting to change jobs is low pay, followed by the temporary nature of employment and poor working conditions.
 
-\vspace{0.5cm}
+\vspace{0.2cm}
 
-To improve youth employment, interventions from the supply and demand side can be done. From the supply side, interventions focus mainly in increasing employment rate and earnings. Programs on skills training and support self-employment have largest effects, although the second one works better. On the demand side, programs have positive effects, although they are small. Those interventions that support the small and medium entrepreneurship (SMEs) are more effective in creating jobs than interventions that address micro-firms. 
+The 2013 World Development Report (World Bank, 2018) comes to the conclusion that supply-side interventions are likely to be less effective and sustainable without addressing institutional and market failures on the demand-side that affect the entry and growth of firms. According to a 2018 World Bank study, “promoting job creation requires targeted interventions on the demand side that address specific constraints or market failures facing informal sector enterprises, formal sector firms, and farms. Important firm specific constraints or market failures include, insufficient access to finance, capacity and information gaps, coordination failures, and failure to capture social externalities of jobs.” 
 
-\vspace{0.5cm}
+\vspace{0.2cm}
 
+To strength future interventions, it is relevant to know who the young are, which are their characteristics and in particular, which are the differences between those who have a job and those that do not. Those difference can be demographic or socioeconomic. This is exactly the aim of this project, try to see if from the SWTS those characteristics can be found. 
 
-```{r include=FALSE}
-my_spdf <- readOGR( 
-  dsn= paste0(getwd(),"/Data/world_shape_file/") , 
-  layer="TM_WORLD_BORDERS_SIMPL-0.3",
-  verbose=FALSE
-)
-africa <- my_spdf[my_spdf@data$REGION==2 , ] 
-par(mar=c(0,0,0,0))
-```
+# Data
 
-## Africa plot
+## Source of the data
+With the aim to portray which are the elements that allow a youth to transit from unemployment to employment, the International Labour Organization (ILO) designed the School-to-Work Transition Survey (SWTS). As ILO defined, the SWTS is a unique survey instrument that generates relevant labor market information on young people aged 15 to 29 years, including longitudinal information on transitions within the labor market.
 
-```{r africa}
-# Plot africa
-plot(africa , xlim=c(-50,10) , ylim=c(-50,35), col="steelblue", lwd=0.9 )
-```
+\vspace{0.2cm}
 
-## Data
-– Where does the data come from?
-– What is the unit of observation?
-– What are the variables of interest?
-– What steps did you take to wrangle the data?
+The databases for 33 countries were shared to me by the ILO for this final project. The databases corresponds to countries from different continents, however, for this project, 9 countries from the non Sub-Saharan Africa were chosen: Benin, Liberia,
+Togo, Congo, Malawi, Zambia, Madagascar, Tanzania and Uganda.
 
-# Source of the data
-With the aim to portray which are the elements that allow a youth to transit from unemployment to employment, the International Labour Organization (ILO) designed the School-to-Work Transition Survey (SWTS). As ILO defined, the SWTS is a unique survey instrument that generates relevant labor market information on young people aged 15 to 29 years, including longitudinal information on transitions within the labor market. The SWTS thus serves as a unique tool for demonstrating the increasingly tentative and indirect paths to decent and productive employment that today’s young men and women are facing.
+\vspace{0.2cm}
 
-The databases for 33 countries was shared by the ILO for this final project. The databases corrreponds to countries for different countries, however, for this project, 9 countries from the non Sub-Saharan Africa were choosen. The reason for choosing those is because currently I am working in my capstone project in which we are trying to identify the determinants of youth employment in Burkina Faso and the countries selected preserve similar income conditions as Burkina.
+The reason for choosing Sub-Saharan Africa is because I am currently working in my capstone project and it is related to youth employment in Burkina Faso. The countries selected preserve similar income conditions as Burkina. It is relevant to say that in the Project Proposal, I mentioned that I would work with the information from the 33 countries for which I have information, however, due to time constraints and because the databases are not exactly the same, I focused in the countries mentioned before.
 
-The unit of observation in this project is each youth among 15 and 29 year old that answer the survey in each of the selected countries. So far, a country-youth unit of analysis is out from the scope of this project.
+\vspace{0.2cm}
 
-# Variables of interest
-In average, each survey has around 400 questions. Considering that my objective is to find which characteristics determine that a youth get a job, I chose as dependent the dummy variable "employed" which values 1 if the youth have a job at the time of the survey and 0 if not. This will allow me to structure models that measure the probability that a youth get a youth based on the chosen independent variables.
+The unit of observation in this project is each youth among 15 and 29 year old that answered the survey in each of the selected countries.
 
-As independet variables, I chose 11 variables: age, sex, education level, marital status, education level, if work while study, if internship, if have a reserve wage, if live in rural or urban areas, if have childrens, and financial situation at home.
+## Variables of interest
+In average, each survey has around 400 questions. Considering that my objective is to find which characteristics determine that a youth get a job, I chose as dependent variable the dummy "employed". This will allow me to structure models that measure the probability that a youth get a job based on the chosen independent variables.
 
-# Wrangling data 
-The most challeging part in wrangling the data was to match each variable of interest in the different databases. Even though each database follows in general the same SWTS strucrure and almost all the questions are the same, those are named and labeled differentyl. This implied to go over each database, along the more than 400 questions in the 9 countries, to match the variables of interest.
+\vspace{0.2cm}
 
-After that, the path was easier. Each base was in Stata format, so changed that to R format and applied a "remove labels" command because labels merged with the variable tittle complicating the subsequent merge. Then for each database, I selected just the variables of interest mentioned above and relabeled. Then create dummies
+As independent variables, I chose 13 variables: age, sex, education level, marital status, field of study, if worked while studying, if did internship, if had a reserve wage, if used to live in rural or urban areas, if have children, financial situation at home, and the level of education of both, father and mother. Unfortunately, after wrangling the data and running the ML techniques, I dropped educational level, reserve wage, internship, previous residence area and field of study. Finally, I dropped parents level of education due to inconsistencies in the way the bases are labeling.
 
-Finally, I merged the 9 databases in one.
+## Wrangling data 
+The most challenging part in wrangling the data was to match each variable of interest in the different databases. Even though each database follows in general the same SWTS structure and almost all the questions are the same, the names and labels are different. This implied to go over each database, along the more than 400 questions in the 9 countries, to match each variables of interest.
 
-```{r include=FALSE}
+\vspace{0.2cm} 
+
+Each base was in Stata format, so I changed that to R format and applied a "remove labels" command because labels merged with tittles, complicating the subsequent merge. Then, for each database, I selected just the variables of interest mentioned above and relabeled those. Then I created dummies or categorical variables.
+
+\vspace{0.2cm} 
+
+Finally, I merged all the 9 databases in one, getting a N size of 27,365, distributed this way:  Benin, 4306; Congo, 3276; Liberia, 2416; Madagascar, 3300; Malawi, 3097; Tanzania, 1988; Togo, 2708; Uganda, 3049 and Zambia, 3225. 
+
+```{r Importing databases, include=FALSE}
 # Importing databases that are in Stata format and removing labels
 
 Togo_2014 <- read_dta("Data/Togo_2014.dta") %>%
@@ -126,7 +123,7 @@ Uganda_2015 <- read_dta("Data/Uganda_2015.dta") %>%
 
 ```
 
-```{r include=FALSE}
+```{r Benin, include=FALSE}
 #Benin
 #Keeping just variables of interest and labeling
 Benin_2014 <- select(Benin_2014, personid, m01_07, C05, C12, C14, C15, F19, b04, b06, b09, b11, b12, b21, b23, employed) %>%
@@ -179,7 +176,7 @@ table(Benin_2014$child) #child: 1=Yes, 0=No
 
 ```
 
-```{r include=FALSE}
+```{r Togo, include=FALSE}
 #Togo
 
 #Keeping just variables of interest and labeling
@@ -237,10 +234,11 @@ table(Togo_2014$child) #child: 1=Yes, 0=No
 ```
 
 ```{r include=FALSE}
+#First merge to test. After this, I merged each additional database to this original database.
 base_merge <- rbind(Togo_2014, Benin_2014)
 ```
 
-```{r include=FALSE}
+```{r Liberia, include=FALSE}
 #Liberia
 
 #Keeping just variables of interest and labeling
@@ -302,7 +300,7 @@ base_merge <- rbind(base_merge, Liberia_2014)
 table(base_merge$country)
 ```
 
-```{r}
+```{r Congo, include=FALSE}
 #Congo
 
 #Keeping just variables of interest and labeling
@@ -362,7 +360,7 @@ base_merge <- rbind(base_merge, Congo_2015)
 table(base_merge$country)
 ```
 
-```{r Malawi}
+```{r Malawi, include=FALSE}
 #Malawi
 
 #Keeping just variables of interest and labeling
@@ -422,7 +420,7 @@ base_merge <- rbind(base_merge, Malawi_2014)
 table(base_merge$country)
 ```
 
-```{r Zambia}
+```{r Zambia, include=FALSE}
 #Zambia
 
 #Keeping just variables of interest and labeling
@@ -482,7 +480,7 @@ base_merge <- rbind(base_merge, Zambia_2014)
 table(base_merge$country)
 ```
 
-```{r Madagascar}
+```{r Madagascar, include=FALSE}
 #Madagascar
 
 #Keeping just variables of interest and labeling
@@ -543,7 +541,7 @@ base_merge <- rbind(base_merge, Madagascar_2012)
 table(base_merge$country)
 ```
 
-```{r Tanzania}
+```{r Tanzania, include=FALSE}
 #Tanzania
 
 #Keeping just variables of interest and labeling
@@ -603,7 +601,7 @@ base_merge <- rbind(base_merge, Tanzania_2013)
 table(base_merge$country)
 ```
 
-```{r Uganda}
+```{r Uganda, include=FALSE}
 #Uganda
 
 #Keeping just variables of interest and labeling
@@ -659,48 +657,76 @@ Uganda_2015$child[Uganda_2015$child==0]<-0
 table(Uganda_2015$child) #child: 1=Yes, 0=No
 ```
 
-```{r include=FALSE}
+```{r Final merge, include=FALSE}
 base_merge <- rbind(base_merge, Uganda_2015)
 print(table(base_merge$country))
-
-base_merge <- select(base_merge,-educ_fath, -educ_moth, -field_edu)
 ```
 
-## Analysis
-– Describe the methods/tools you explored in your project.
-– Outline in detail our entire analysis.
-  - Justify the tools/methods that you used.
-  - Assume the reader is smart but doesn’t know R/Machine Learning well. That is, be crystal clear about what you’re doing and why.
+```{r eval=FALSE, fig.height=10, fig.width=8, warning=FALSE, include=FALSE, r,fig.height=10}
 
-
-In the process of running ML techniques, I identify some outliers in my data:
-- Remove age>29
-- Remove financial_sit>5
-
-First, let's look at the variables.
-```{r,fig.height=10,fig.width=8}
-base_merge %>% 
+graph_distr1 <- base_merge %>% 
   select_if(is.numeric) %>% 
   gather(var,val) %>% 
   ggplot(aes(val,group=var)) +
   geom_histogram(bins = 30) +
   facet_wrap(~var,scales="free",ncol=2)
+
+print(graph_distr1)
 ```
 
-Extra wrangling
+## Extra wrangling
+In the process of running ML techniques, I identified some outliers in the data and variables with many missing values. 
 
-```{r}
+Variables with outliers:Remove age>29. Remove financial_sit>5
+
+Variables with many missing values:edu_level: 25,529; reserve_wage: 20,853; internship: 18,730; prev_resid: 21,518; field_edu: 16,182
+
+```{r include=FALSE}
 #Remove age>29
-base_merge <- subset(base_merge,!age>29)
-table(base_merge$age)
-
-base_merge <- subset(base_merge,!financial_sit>5)
-table(base_merge$financial_sit)
-
+base_merge2 <- subset(base_merge,!age>29) %>%
+  subset(.,!financial_sit>5)
+table(base_merge2$age)
+table(base_merge2$financial_sit)
 ```
 
-## 3. The model
-The objective of the project is to find a model that predicts the probability of young people to find a job, base on certain characteristics, in Sub-Saharan Africa countries.
+Given this, I built a new database, removing the problematic variables. As a final manipulation, I removed all the missing values.
+```{r include=FALSE}
+#See missing values
+print(sum(is.na(base_merge2$employed)))
+print(sum(is.na(base_merge2$sex)))
+print(sum(is.na(base_merge2$age)))
+print(sum(is.na(base_merge2$married)))
+print(sum(is.na(base_merge2$edu_level)))
+print(sum(is.na(base_merge2$work_while_study)))
+print(sum(is.na(base_merge2$reserve_wage)))
+print(sum(is.na(base_merge2$intership)))
+print(sum(is.na(base_merge2$prev_resid)))
+print(sum(is.na(base_merge2$financial_sit)))
+print(sum(is.na(base_merge2$educ_fath)))
+print(sum(is.na(base_merge2$educ_moth)))
+print(sum(is.na(base_merge2$field_edu)))
+
+table(base_merge2$edu_level)
+table(base_merge2$educ_fath)
+table(base_merge2$educ_moth)
+
+base_merge2 <- select(base_merge2, -edu_level, -reserve_wage, -intership, -prev_resid, -educ_fath, -educ_moth, -field_edu, -id, -country) %>%
+  rename(work_while.study=work_while_study)
+```
+
+```{r include=FALSE}
+sum(is.na(base_merge2))
+```
+
+```{r include=FALSE}
+#Remove missing values:
+base_merge2 <- na.omit(base_merge2) 
+sum(is.na(base_merge2))
+```
+
+# Analysis
+
+## The model
 
 $$
 \begin{aligned}
@@ -708,47 +734,58 @@ Y = \beta_{0} + \beta_{n} X_{n} + \epsilon
 \end{aligned}
 $$
 Where: 
-\vspace{0.5cm}
+\vspace{0.2cm}
 
 * $Y$ is the probability of a youth to being employed 
 * $X_{n}$ is a matrix of predictors based on the information from the survey
+
+At this point, we know that our predictors are: **Sex of the youth**: 1 if women, 0 if male. This coefficient will provide information about gender gap, this is, if there is a higher probability for a male to get a job. **Age**: this is a numeric variable between 15 and 29 years. We expect that the older the higher the probability to get a job. **Married**: 1 if married, 0 if not. We expect a higher probability to have a job for those who are married with respect to those who are not. **Work while study**: 1 if worked while studying, 0 if not. We expect that those that worked while studying have higher probability to be employed. **Having children**: 1 if they have kids, 0 if not. We expect that those who have kids have a higher probability to have a work. **Financial situation**: categorical variable that increase from the easiest situation to a tough one. We expect a positive relation, the hardest the situation, the strongest the motivation to get a job.
+
+\vspace{0.2cm}
 
 ## Logit regression
 
 This is a simple logit regression to see the the results of the expected model
 
-```{r}
+```{r include=FALSE}
 # Establish employed as a categorical variable
-base_merge$employed <- factor(base_merge$employed)
+base_merge2$employed[base_merge2$employed==1]<- "yes" 
+base_merge2$employed[base_merge2$employed==0]<- "no" 
+
+table(base_merge2$employed) #employed: 1=Yes, 2=No
+
+base_merge2$employed<-factor(base_merge2$employed) 
+class(base_merge2$employed)
 ```
 
 ```{r echo=FALSE, warning=TRUE}
-mylogit <- glm(employed ~ sex + age + married + edu_level + work_while_study + reserve_wage + intership + child + prev_resid + financial_sit, data = base_merge, family = "binomial")
+mylogit <- glm(employed ~ sex + age + married + work_while.study + child + financial_sit, data = base_merge2, family = "binomial")
 
-glm(employed ~ sex + age + married + edu_level + work_while_study + reserve_wage + intership + child + prev_resid + financial_sit, data = base_merge, family = "binomial") %>%
+glm(employed ~ sex + age + married + work_while.study + child + financial_sit, data = base_merge2, family = "binomial") %>%
   summary() %>%
   xtable() %>%
   kable()
 ```
 
-## Machine learning Techniques
-# Split the Sample: Training and test data
+Looking at the coefficients from the logit regression, all of them threw the expected results excepting for sex. Recall that sex is labeled as 1 for female, therefore, this result says that there is a slightly higher probability to have a job, in average, if being a female. From the other results, it is interesting to see that those that worked while studying and those with children have strongly higher probabilities to have a job with respect to those that did not worked or have no children.
 
-Before event looking at the data, let's split the sample up into a training and test dataset. We'll completely hold off on viewing the test data, so as not to bias our development of the learning model. 
+## Machine learning Techniques (MLT)
+As mentioned before, the MLT follow the same model but under supervised techniques. These are used to predict or explain the relation among variables. We will apply 4 techniques: a new logistic regression, K-Nearest Neighbors, Classification and Regression Trees and Random Forest. Along each technique an explanation will be provided.
 
-```{r}
-index = createDataPartition(base_merge$employed,p=.8,list=F) 
-train_data = base_merge[index,] # Use 80% of the data as training data 
-test_data = base_merge[-index,] # holdout 20% as test data 
+The first step is to split the data in training (80%) and test (20%) data set. Since this is a random partition, it is expected that the results would be the same in both partitions.
+
+```{r include=FALSE}
+index = createDataPartition(base_merge2$employed,p=.8,list=F) 
+train_data = base_merge2[index,] # Use 80% of the data as training data 
+test_data = base_merge2[-index,] # holdout 20% as test data 
 
 dim(train_data)
 dim(test_data) 
 ```
 
-Visualize the distribution for each variable.
+After the partition, let's take a look on the distribution for each variable for the train data set. Most of them are binary so we expect to have data in zero and one. Doing this before, allowed me to identify outliers and missing values.
 
-First, let's look at the variables.
-```{r,fig.height=10,fig.width=8}
+```{r echo=FALSE, fig.height=6, fig.width=6, message=FALSE, warning=FALSE}
 train_data %>% 
   select_if(is.numeric) %>% 
   gather(var,val) %>% 
@@ -757,21 +794,9 @@ train_data %>%
   facet_wrap(~var,scales="free",ncol=2)
 ```
 
-# Pre-process the Data 
+The changes to our data are saved in a "recipe" so we can then apply this instructions to other data sets. In this case we apply the "recipe" to our train and test data. Some of the changes that I did before was to change the dependent variable from numbers to text, that it is from 1 to "yes" and 0 to "no". As well, although not relevant for this porpoise, the variable "country" that refers to the country of each youth, change from a categorical variable to a dummy for each country.
 
-Missing values:
-
-```{r}
-sum(is.na(base_merge))
-```
-Remove missing values:
-```{r}
-base_merge <- na.omit(base_merge) 
-sum(is.na(base_merge))
-```
-
-
-```{r}
+```{r include=FALSE}
 rcp <- 
   recipe(employed ~  .,train_data) %>% 
   step_dummy(all_nominal(),-all_outcomes()) %>% 
@@ -783,17 +808,14 @@ train_data2 <- bake(rcp,train_data)
 test_data2 <- bake(rcp,test_data) 
 ```
 
-Check that our pre-processing worked. 
-
-```{r}
+```{r include=FALSE}
+#Check that our pre-processing worked. 
 head(train_data2)
 ```
 
-# Cross-validation
+## Cross-validation
 
-When comparing different machine learning models, we want to make sure we're making a fair and equal comparison. One way that random chance can sneak into our assessments of model fit is through cross-validation. We want to make sure that we're cross-validating the data on the exact same data partitions. 
-
-`caret` makes this ease to do. Let's use the k-fold cross-validation method with 10 folds in the data. 
+When comparing different machine learning models, we want to be sure that we're making a fair and equal comparison. One way that random chance can sneak into our assessments of model fit is through cross-validation. We want to make sure that we're cross-validating the data on the exact same data partitions. In this case, I used the k-fold cross-validation method with 5 folds in the data, getting groups of around 3,600 observations.
 ```{r}
 set.seed(1988) # set a seed for replication purposes 
 
@@ -802,8 +824,7 @@ folds <- createFolds(train_data2$employed, k = 5) # Partition the data into 10 e
 sapply(folds,length)
 ```
 
-Now, let's use the `trainControl()` function from `caret` to set up our validation conditions. An important changes from last week: we have to tell `caret` that we are dealing with a classification problem. We can do this by adding `summaryFunction = twoClassSummary` and `classProbs = TRUE` to the cross-validation function. 
-
+Then, I set up the validations conditions. Here we establish that all the process that will be run in the MLT, have to consider a cross validation among the 5 folds we just created. Likewise, I set up that we are dealing with a classification problem, that it is, that our outcome is either have a job or not.
 
 ```{r}
 control_conditions <- 
@@ -814,33 +835,192 @@ control_conditions <-
   )
 ```
 
-We'll now use this same cross-validation object for everything that we do. 
-
 # Models
+To run the models, I used a powerful R package named "caret". The performance measure that I will use to determine the model that best perform is the Receiver Operating Characteristics or ROC, given that this is a classification problem.
 
-Let's explore the different models that we covered in the lecture using the same package framework. As we saw last time in class, `caret` facilitates this task nicely. 
+ROC is a probability curve. It tells how much a model is capable of distinguishing between classes. Higher the area under the curve, better the model is at predicting 0s as 0s and 1s as 1s. In our example, to identify if a unemployed youth is correctly classified as unemployed and if an employed one is correctly classified as employed.
 
 ## Logistic Regression
+The difference in this logistic regression from the first showed above is that here we are only focus in the ROC, in order to compare with the other models. The ROC for this model is 0.7416589.
 
-Recall we have issues with some of the variable categories (i.e. do to insufficient variation), so we'll use a retricted model here and just include _some_of the variables.
+```{r}
+mod_logit <-
+  train(employed ~ sex + age + married + work_while.study + child + financial_sit, 
+        data=train_data2, # Training data 
+        method = "glm", # logit function
+        metric = "ROC", # area under the curve
+        trControl = control_conditions
+  )
+mod_logit
+```
+
+## K-Nearest Neighbors
+
+This algorithm assumes that similar things exist in close proximity. In other words, similar things are near to each other and are classified in "neighbors". This model plays with the number of K neighbors and provide a ROC for each of them. 
+
+As we will see in the results and in the graph below, a k=9 provides a higher ROC than k=5 but, once we go over k=10, the increase in ROC turns smaller for each additional neighbor. The highest ROC=0.7212098 for this model was with k=9, higher than in the logistic regression.
+
+```{r}
+mod_knn <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "knn", # K-Nearest Neighbors Algorithm
+        metric = "ROC", # area under the curve
+        trControl = control_conditions
+  )
+```
+
+```{r}
+mod_knn
+```
+
+```{r fig.height=4, fig.width=4}
+plot(mod_knn)
+```
+
+```{r include=FALSE}
+knn_tune = expand.grid(k = c(1,3,10,50))
+knn_tune
+```
+
+```{r}
+mod_knn2 <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "knn", # K-Nearest Neighbors Algorithm
+        metric = "ROC", # area under the curve
+        tuneGrid = knn_tune, # add the tuning parameters here 
+        trControl = control_conditions
+  )
+```
+
+```{r eval=FALSE, fig.height=4, fig.width=4, include=FALSE}
+plot(mod_knn2)
+```
+
+## Classification and Regression Trees (CART)
+This model follows the logic of binary decision trees and the model is used to identify the "class" within which a target variable would likely fall into. In this example, the model identified that the class "having children" and "work while studying" were the best classifications to predict the probability of a youth to get a job.
+
+```{r}
+mod_cart <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "rpart", # Classification Tree
+        metric = "ROC", # area under the curve
+        trControl = control_conditions
+  )
+```
+
+
+```{r fig.height=4, fig.width=4, include=FALSE}
+plot(mod_cart)
+```
+
+Decision tree:
+
+```{r fig.height=4, fig.width=4}
+fancyRpartPlot(mod_cart$finalModel)
+```
+
+```{r}
+print(mod_cart$finalModel)
+```
+
+```{r}
+tune_cart2 <- expand.grid(cp = c(0.0010281)) # Complexity Parameter (how "deep" our trees should grow)
+mod_cart2 <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "rpart", # Classification Tree
+        metric = "ROC", # area under the curve
+        tuneGrid = tune_cart2, # Tuning parameters
+        trControl = control_conditions
+  )
+
+```
+
+```{r eval=FALSE, fig.align='center', include=FALSE}
+#I won't show in the final report this tree
+fancyRpartPlot(mod_cart2$finalModel)
+```
+
+## Random Forest
+A Random Forest process is basically running several CART models or decision trees, playing with different variables and different sets of the database, taking the average of all of them instead of just choosing one. 
+
+```{r}
+mod_rf <-
+  train(employed ~ ., # Equation (outcome and everything else)
+        data=train_data2, # Training data 
+        method = "ranger", # random forest (ranger is much faster than rf)
+        metric = "ROC", # area under the curve
+        importance = "permutation",
+        trControl = control_conditions
+  )
+```
+
+As we can see in the output table, the RF with the highest ROC is 0.7414514 with 2 predictors randomly selected and nodes splitted by "extratrees" as tuning parameter.
+```{r}
+mod_rf
+```
+
+```{r eval=FALSE, include=FALSE}
+plot(mod_rf)
+```
   
-## Results
-– Give a detailed summary of your results.
-– Present your results clearly and concisely.
-– Please use visualizations and tables whenever possible.
+# Results
+Based on the next plot, I conclude that the MLT that provides the higher ROC, this is, the highest correct classification of employed and unemployed young population based on the selected independent variables are the Random Forest model and logit regression. The difference in ROC is slightly different in favor of logit model, however, I will stick with RF as my predilection model.
 
+```{r,fig.width=12,fig.height=4}
+# Organize all model imputs as a list.
+mod_list <-
+  list(
+    logit = mod_logit,
+    knn1 = mod_knn,
+    knn2 = mod_knn2,
+    cart = mod_cart,
+    cart2 = mod_cart2,
+    rf = mod_rf
+  )
 
-## Discussion
-– Speak on the “success” of your project (as defined in your proposal).
-  - Did you achieve what you set out to do? If not why?
-– What tools/methods did you consider but not use in the final analysis?
-– How would you expand the analysis if given more time?
+# Generate Plot to compare output. 
+dotplot(resamples(mod_list),metric = 'ROC')
+```
 
-In this sense, a success in the project will be if I can provide evidence of which is the youth profile that successfully enroll the job market and which is the weight of each characteristic in the probability of success. For example, if years of education influence the probability to find a job, in which proportion, in average the impact is.
+In the next confusion matrix we can see those young people that was correctly classified as employed or unemployed running the predict parameters in the Random Forest over the test data. The classification accuracy is 67%.
   
+```{r echo=FALSE}
+pred <- predict(mod_rf,newdata = test_data2)
+confusionMatrix(pred, test_data2$employed)
+```
 
+Finally, the most relevant variables for the Random Forest process are: if the youth had children, if they worked while studying and if they were married.
+```{r echo=FALSE}
+varImp(mod_rf)
+```
+  
+# Conclusion
+In the project proposal I establish as "success" if I can provide evidence of which is the youth profile that successfully enroll the job market and which is the weight of each characteristic in the probability of success. For example, if years of education influence the probability to find a job, in which proportion, in average the impact is.
+
+\vspace{0.5cm}
+
+What I can conclude is that I partially succeed. From the failure side, I couldn't use variables that I considered relevant at the beginning such as years of education or if the youth live in urban or rural ares, however, this is because of the quality of the data. As well, I expected to be able to provide the weight of influence of each independent variable in the probability of get a job but I failed.
+
+\vspace{0.5cm}
+
+However, from the success side, the model I proposed, after Random Forest process, can predict successfully the 67% of correct classification as employed or unemployed. In this sense, even though I couldn't provide a weight, I am able to say that the most predictive variables are if the youth have children, if they worked while studying, their age and if they are married.
+
+\vspace{0.5cm}
+
+In terms of public policy interventions, which was my main interest, I don't get very relevant conclusions, but interesting confirmations from previous studies can be provided, nonetheless. For example, that in the context of Sub-Saharan countries, having a job while studying increase the chance to get a job after school. This outcome can be used to support part time jobs programs for young people while studying.
+\vspace{0.5cm}
+**Note:** Each time I knit the document, all the ML results change and the best model change as well as the ROC, confusion matrix, etcetera. Just to let you know that my results and conclusions are over a knit version different to this.
+\vspace{0.5cm}
 
 # References:
+* World Bank. 2018. Integrated Youth Employment Programs – A Stock-take of Evidence on what work in Youth Employment programs, p. 24
+
 * Goldin, N. & M. Hobson with P. Glick, M. Lundberg, S. Puerto (S4YE). 2015. “Toward Solutions for Youth Employment: A Baseline for 2015.” Solutions for Youth Employment, Washington D.C
 
 * OECD (2018), The Future of Rural Youth in Developing Countries: Tapping the Potential of Local Value Chains, OECD Publishing, Paris.
+
+
